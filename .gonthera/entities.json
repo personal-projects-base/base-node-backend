@@ -1,0 +1,39 @@
+[
+  {
+    "comment": "Recurso inicial de exemplo",
+    "entityName": "example",
+    "tableName": "example",
+    "generateDefaultControllers": true,
+    "controllerAbstract": false,
+    "entityFields": [
+      {
+        "comment": "Identificador único",
+        "fieldName": "id",
+        "list": false,
+        "fieldProperties": {
+          "fieldType": "uuid",
+          "required": true,
+          "valueDefault": ""
+        },
+        "metadata": {
+          "nullable": false,
+          "key": true
+        }
+      },
+      {
+        "comment": "Nome do recurso",
+        "fieldName": "name",
+        "list": false,
+        "fieldProperties": {
+          "fieldType": "string",
+          "required": true,
+          "valueDefault": ""
+        },
+        "metadata": {
+          "nullable": false,
+          "key": false
+        }
+      }
+    ]
+  }
+]

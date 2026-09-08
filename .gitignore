@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+
+# Estes caminhos são recriados pelo Gonthera CLI.
+src/generated/
+prisma/schema.prisma
+
+# Migrations devem ser versionadas.
+!prisma/migrations/
+!prisma/migrations/**

@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgresql://base_node:base_node_change_me@postgres:5432/base_node?schema=public
+      POSTGRES_NATIVE_ENABLED: "false"
+      MONGODB_ENABLED: "true"
+      MONGODB_URL: mongodb://base_node:base_node_change_me@mongodb:27017/base_node?authSource=admin
+      MONGODB_DATABASE: base_node
+      RABBITMQ_ENABLED: "true"
+      RABBITMQ_URL: amqp://base_node:base_node_change_me@rabbitmq:5672
+      RABBITMQ_EXCHANGE: base.node.events
+      RABBITMQ_REQUEUE_ON_ERROR: "false"
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+

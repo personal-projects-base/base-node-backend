@@ -1,0 +1,12 @@
+{
+  "RabbitMq": {
+    "pub": [
+      {
+        "name": "entityChanged",
+        "queue": "base.node.entity.changed",
+        "routingKey": "base.node.entity.changed"
+      }
+    ],
+    "sub": []
+  }
+}
