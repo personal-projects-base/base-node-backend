@@ -27,8 +27,8 @@ PostgreSQL, o provider relacional oficialmente suportado.
 Requisitos: Node.js 20.19 ou superior e Java 11 ou superior.
 
 ```bash
-cp .env.example .env
 npm install
+npm run setup
 npm run gonthera-validate
 npm run gonthera-cli
 npm run prisma:generate
@@ -112,6 +112,44 @@ TRUST_PROXY_HOPS=0
 confiáveis antes da API. Uma configuração incorreta permite falsificação do IP usado
 pelo rate limit. O store padrão fica em memória e atende uma única instância; em uma
 implantação com múltiplas réplicas, substitua-o por um store externo compartilhado.
+
+Helmet adiciona os headers de segurança e mantém uma política CSP compatível com o
+Swagger UI. O CORS aceita somente as origens listadas, separadas por vírgula:
+
+```dotenv
+HELMET_ENABLED=true
+CORS_ENABLED=true
+CORS_ORIGINS="http://localhost:4200,http://localhost:5173"
+CORS_CREDENTIALS=false
+```
+
+As variáveis são validadas com Zod antes da infraestrutura iniciar. Uma configuração
+inválida interrompe o processo e informa quais chaves precisam ser corrigidas.
+
+Os logs usam Pino em JSON, carregam `requestId` e ocultam campos comuns de senha,
+token, autorização e cookie. Configure o nível com `LOG_LEVEL`.
+
+## Configurar uma cópia do template
+
+Após baixar a base e instalar as dependências, execute `npm run setup`. O assistente
+configura nome técnico, nome de exibição, `mainPackage`, banco MongoDB, porta e
+exchange RabbitMQ. Ele atualiza `package.json`, lockfile, `.gonthera/project.json`,
+`.env.example`, título da documentação e cria `.env` quando ainda não existir.
+
+Para uso não interativo:
+
+```bash
+npm run setup -- \
+  --name minha-api \
+  --display-name "Minha API" \
+  --main-package com.empresa.minhaapi \
+  --database minha_api \
+  --port 3000 \
+  --exchange minha.api.events
+```
+
+Um `.env` existente é preservado. Use `--overwrite-env` somente quando quiser
+substituí-lo pelo novo `.env.example`.
 
 ## Fluxo de desenvolvimento
 

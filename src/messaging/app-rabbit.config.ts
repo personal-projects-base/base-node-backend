@@ -1,11 +1,12 @@
 import { RabbitConfig } from '../generated/messaging/rabbitmq/rabbit-config';
+import { env } from '../configuration/environment';
 
 export class AppRabbitConfig extends RabbitConfig {
   constructor() {
     super({
-      exchange: process.env.RABBITMQ_EXCHANGE ?? 'base.node.events',
-      url: process.env.RABBITMQ_URL,
-      requeueOnError: process.env.RABBITMQ_REQUEUE_ON_ERROR === 'true'
+      exchange: env.RABBITMQ_EXCHANGE,
+      url: env.RABBITMQ_URL,
+      requeueOnError: env.RABBITMQ_REQUEUE_ON_ERROR
     });
   }
 }

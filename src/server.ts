@@ -1,21 +1,14 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
 import { createApp } from './app';
+import { env } from './configuration/environment';
+import { logger } from './configuration/logger';
 import { database } from './configuration/database/app-database.config';
 import { startDataStores, stopDataStores } from './configuration/database/database-runtime';
 import { startMessaging, stopMessaging } from './messaging/messaging-runtime';
 
-function resolvePort(): number {
-  const port = Number(process.env.PORT ?? 3000);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error('PORT deve ser um inteiro entre 1 e 65535.');
-  }
-  return port;
-}
-
 async function main() {
-  const port = resolvePort();
-  const host = process.env.HOST ?? '127.0.0.1';
+  const { PORT: port, HOST: host } = env;
 
   await startDataStores();
   await startMessaging();
@@ -28,13 +21,13 @@ async function main() {
       resolve();
     });
   });
-  console.info(`API disponível em http://${host}:${port}`);
+  logger.info({ host, port }, 'API started');
 
   let stopping = false;
   const shutdown = () => {
     if (stopping) return;
     stopping = true;
-    console.info('Encerrando API...');
+    logger.info('Shutting down API');
 
     const timeout = setTimeout(() => process.exit(1), 10_000);
     timeout.unref();
@@ -44,7 +37,7 @@ async function main() {
         await stopDataStores();
         if (error) process.exitCode = 1;
       } catch (shutdownError) {
-        console.error('Falha ao encerrar recursos:', shutdownError);
+        logger.error({ err: shutdownError }, 'Failed to stop resources');
         process.exitCode = 1;
       } finally {
         clearTimeout(timeout);
@@ -57,7 +50,7 @@ async function main() {
 }
 
 main().catch(async error => {
-  console.error('Falha ao iniciar API:', error);
+  logger.fatal({ err: error }, 'Failed to start API');
   process.exitCode = 1;
   await stopMessaging().catch(() => undefined);
   await stopDataStores().catch(() => undefined);

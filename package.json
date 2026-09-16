@@ -4,6 +4,7 @@
   "private": true,
   "description": "API base Node.js com Gonthera CLI, Express, Prisma, MongoDB, PostgreSQL e RabbitMQ.",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "gonthera-cli": "java -jar ./.gonthera/gonthera-cli-2.1.4.jar",
     "gonthera-validate": "java -jar ./.gonthera/gonthera-cli-2.1.4.jar --validate",
     "prisma:validate": "prisma validate",
@@ -20,15 +21,20 @@
     "@prisma/client": "5.22.0",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^2.0.1",
+    "cors": "2.8.6",
     "dotenv": "16.4.7",
     "express": "^5.2.1",
     "express-rate-limit": "8.6.1",
+    "helmet": "8.3.0",
     "mongodb": "^7.6.0",
     "pg": "^8.22.0",
+    "pino": "10.3.1",
     "prisma": "5.22.0",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "zod": "4.6.4"
   },
   "devDependencies": {
+    "@types/cors": "2.8.19",
     "@types/express": "^5.0.6",
     "@types/express-serve-static-core": "5.0.6",
     "@types/node": "^22.10.2",

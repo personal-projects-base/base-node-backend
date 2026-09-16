@@ -1,13 +1,14 @@
 import { Pool, type PoolConfig } from 'pg';
+import { env } from '../environment';
 
 export abstract class PostgresConfig {
   protected poolInstance?: Pool;
 
   protected resolveConnectionString(): string {
-    const postgresUrl = process.env.POSTGRES_URL?.trim();
+    const postgresUrl = env.POSTGRES_URL;
     if (postgresUrl) return postgresUrl;
 
-    const databaseUrl = process.env.DATABASE_URL?.trim();
+    const databaseUrl = env.DATABASE_URL;
     if (databaseUrl && /^postgres(?:ql)?:\/\//i.test(databaseUrl)) return databaseUrl;
 
     throw new Error(
@@ -16,10 +17,9 @@ export abstract class PostgresConfig {
   }
 
   protected createOptions(): PoolConfig {
-    const max = Number(process.env.POSTGRES_POOL_MAX ?? 10);
     return {
       connectionString: this.resolveConnectionString(),
-      max: Number.isInteger(max) && max > 0 ? max : 10
+      max: env.POSTGRES_POOL_MAX
     };
   }
 

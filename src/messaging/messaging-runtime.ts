@@ -1,7 +1,8 @@
 import { rabbit } from './app-rabbit.config';
+import { env } from '../configuration/environment';
 
 export async function startMessaging(): Promise<void> {
-  if (process.env.RABBITMQ_ENABLED === 'true') await rabbit.connect();
+  if (env.RABBITMQ_ENABLED) await rabbit.connect();
 }
 
 export async function stopMessaging(): Promise<void> {

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { RequestHandler } from 'express';
+import { env } from '../configuration/environment';
+import { logger } from '../configuration/logger';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
@@ -15,10 +17,10 @@ export const requestInterceptor: RequestHandler = (request, response, next) => {
   response.setHeader('X-Request-Id', requestId);
 
   response.once('finish', () => {
-    if (process.env.REQUEST_LOG_ENABLED === 'false') return;
+    if (!env.REQUEST_LOG_ENABLED) return;
 
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-    console.info(JSON.stringify({
+    logger.info({
       type: 'http_request',
       requestId,
       method: request.method,
@@ -26,7 +28,7 @@ export const requestInterceptor: RequestHandler = (request, response, next) => {
       statusCode: response.statusCode,
       durationMs: Number(durationMs.toFixed(2)),
       ip: request.ip
-    }));
+    }, 'HTTP request completed');
   });
 
   next();

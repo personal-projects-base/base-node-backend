@@ -1,23 +1,21 @@
 import { MongoClient, type MongoClientOptions } from 'mongodb';
+import { env } from '../environment';
 
 export abstract class MongoDatabaseConfig {
   protected clientInstance?: MongoClient;
 
   protected resolveUrl(): string {
-    const url = process.env.MONGODB_URL?.trim();
+    const url = env.MONGODB_URL;
     if (!url) throw new Error('MONGODB_URL deve ser configurada.');
     return url;
   }
 
   protected resolveDatabaseName(): string {
-    return process.env.MONGODB_DATABASE?.trim() || 'base_node';
+    return env.MONGODB_DATABASE;
   }
 
   protected createOptions(): MongoClientOptions {
-    const maxPoolSize = Number(process.env.MONGODB_MAX_POOL_SIZE ?? 10);
-    return {
-      maxPoolSize: Number.isInteger(maxPoolSize) && maxPoolSize > 0 ? maxPoolSize : 10
-    };
+    return { maxPoolSize: env.MONGODB_MAX_POOL_SIZE };
   }
 
   protected createClient(): MongoClient {

@@ -1,4 +1,5 @@
 import { generatedOpenApiDocument } from '../generated/documentation/openapi';
+import { env } from '../configuration/environment';
 
 const healthPath = {
   get: {
@@ -27,7 +28,7 @@ export const openApiDocument = {
   ...generatedOpenApiDocument,
   info: {
     ...generatedOpenApiDocument.info,
-    title: 'Base Node Backend'
+    title: env.APP_DISPLAY_NAME
   },
   tags: [{ name: 'Health' }, ...generatedOpenApiDocument.tags],
   paths: {

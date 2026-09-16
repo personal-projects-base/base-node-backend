@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import type { ErrorRequestHandler } from 'express';
+import { logger } from '../configuration/logger';
 import { CrudError } from '../generated/common/contracts';
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, next) => {
@@ -35,6 +36,11 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
     }
   }
 
-  if (status >= 500) console.error('Request failed:', error);
+  const requestId = response.locals.requestId as string | undefined;
+  if (status >= 500) {
+    logger.error({ err: error, requestId, status, code }, 'Request failed');
+  } else {
+    logger.warn({ requestId, status, code }, 'Request rejected');
+  }
   response.status(status).json({ error: { code, message } });
 };

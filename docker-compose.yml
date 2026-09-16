@@ -24,25 +24,32 @@ services:
       dockerfile: Dockerfile
     environment:
       NODE_ENV: production
+      APP_NAME: "${APP_NAME:-base-node-backend}"
+      APP_DISPLAY_NAME: "${APP_DISPLAY_NAME:-Base Node Backend}"
       HOST: 0.0.0.0
-      PORT: 3000
+      PORT: "${PORT:-3000}"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
       REQUEST_LOG_ENABLED: "true"
+      HELMET_ENABLED: "true"
+      CORS_ENABLED: "true"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:4200,http://localhost:5173}"
+      CORS_CREDENTIALS: "${CORS_CREDENTIALS:-false}"
       RATE_LIMIT_ENABLED: "true"
       RATE_LIMIT_WINDOW_MS: "60000"
       RATE_LIMIT_MAX: "100"
       TRUST_PROXY_HOPS: "0"
-      DATABASE_URL: "mongodb://mongodb:27017/base_node?replicaSet=rs0&directConnection=true"
+      DATABASE_URL: "mongodb://mongodb:27017/${MONGODB_DATABASE:-base_node}?replicaSet=rs0&directConnection=true"
       PRISMA_DEPLOY_MODE: push
       POSTGRES_NATIVE_ENABLED: "false"
       MONGODB_ENABLED: "false"
-      MONGODB_URL: "mongodb://mongodb:27017/base_node?replicaSet=rs0&directConnection=true"
-      MONGODB_DATABASE: base_node
+      MONGODB_URL: "mongodb://mongodb:27017/${MONGODB_DATABASE:-base_node}?replicaSet=rs0&directConnection=true"
+      MONGODB_DATABASE: "${MONGODB_DATABASE:-base_node}"
       RABBITMQ_ENABLED: "false"
       RABBITMQ_URL: amqp://base_node:base_node_change_me@rabbitmq:5672
-      RABBITMQ_EXCHANGE: base.node.events
+      RABBITMQ_EXCHANGE: "${RABBITMQ_EXCHANGE:-base.node.events}"
       RABBITMQ_REQUEUE_ON_ERROR: "false"
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     depends_on:
       mongodb:
         condition: service_healthy
