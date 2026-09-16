@@ -4,9 +4,15 @@ export abstract class PostgresConfig {
   protected poolInstance?: Pool;
 
   protected resolveConnectionString(): string {
-    const connectionString = process.env.DATABASE_URL?.trim();
-    if (!connectionString) throw new Error('DATABASE_URL deve ser configurada.');
-    return connectionString;
+    const postgresUrl = process.env.POSTGRES_URL?.trim();
+    if (postgresUrl) return postgresUrl;
+
+    const databaseUrl = process.env.DATABASE_URL?.trim();
+    if (databaseUrl && /^postgres(?:ql)?:\/\//i.test(databaseUrl)) return databaseUrl;
+
+    throw new Error(
+      'POSTGRES_URL deve ser configurada quando DATABASE_URL não aponta para PostgreSQL.'
+    );
   }
 
   protected createOptions(): PoolConfig {

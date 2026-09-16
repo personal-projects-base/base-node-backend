@@ -4,11 +4,29 @@ import swaggerUi from 'swagger-ui-express';
 import { createGeneratedRoutes } from './generated/routes';
 import { openApiDocument } from './documentation/openapi';
 import { errorHandler } from './middleware/error-handler';
+import { createRateLimitMiddleware } from './middleware/rate-limit';
+import { requestInterceptor } from './middleware/request-interceptor';
 import { customRoutes } from './routes';
+
+function configureTrustProxy(app: express.Express): void {
+  const rawValue = process.env.TRUST_PROXY_HOPS?.trim();
+  if (!rawValue || rawValue === '0') return;
+
+  const hops = Number(rawValue);
+  if (!Number.isInteger(hops) || hops < 0) {
+    throw new Error('TRUST_PROXY_HOPS deve ser um inteiro maior ou igual a zero.');
+  }
+  app.set('trust proxy', hops);
+}
 
 export function createApp(prisma: PrismaClient) {
   const app = express();
   app.disable('x-powered-by');
+  configureTrustProxy(app);
+
+  // Toda requisição passa primeiro pelo interceptor e depois pelo rate limit.
+  app.use(requestInterceptor);
+  app.use(createRateLimitMiddleware());
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/health', (_request, response) => {

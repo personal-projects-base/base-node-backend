@@ -1,5 +1,8 @@
 {
   "mainPackage": "com.gonthera.basenode",
   "projectName": "base-node-backend",
-  "language": "NODE"
+  "language": "NODE",
+  "database": {
+    "provider": "MONGODB"
+  }
 }

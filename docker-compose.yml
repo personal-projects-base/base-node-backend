@@ -1,4 +1,23 @@
 services:
+  mongodb:
+    image: mongo:7
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --host localhost --eval 'try { rs.status().ok } catch (error) { rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"mongodb:27017\"}]}).ok }' | grep 1"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -7,16 +26,27 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3000
-      DATABASE_URL: postgresql://base_node:base_node_change_me@postgres:5432/base_node?schema=public
+      REQUEST_LOG_ENABLED: "true"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_WINDOW_MS: "60000"
+      RATE_LIMIT_MAX: "100"
+      TRUST_PROXY_HOPS: "0"
+      DATABASE_URL: "mongodb://mongodb:27017/base_node?replicaSet=rs0&directConnection=true"
+      PRISMA_DEPLOY_MODE: push
       POSTGRES_NATIVE_ENABLED: "false"
-      MONGODB_ENABLED: "true"
-      MONGODB_URL: mongodb://base_node:base_node_change_me@mongodb:27017/base_node?authSource=admin
+      MONGODB_ENABLED: "false"
+      MONGODB_URL: "mongodb://mongodb:27017/base_node?replicaSet=rs0&directConnection=true"
       MONGODB_DATABASE: base_node
-      RABBITMQ_ENABLED: "true"
+      RABBITMQ_ENABLED: "false"
       RABBITMQ_URL: amqp://base_node:base_node_change_me@rabbitmq:5672
       RABBITMQ_EXCHANGE: base.node.events
       RABBITMQ_REQUEUE_ON_ERROR: "false"
     ports:
       - "3000:3000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
     restart: unless-stopped
 
+volumes:
+  mongodb_data:
