@@ -1,142 +1,77 @@
 # Base Node Backend
 
 Template de API Node.js em TypeScript preparado para receber código gerado pelo
-Gonthera CLI 2.1.4. A aplicação inclui Express 5, Prisma com MongoDB por padrão,
-clientes nativos opcionais para MongoDB e PostgreSQL, RabbitMQ, Swagger, Docker e
-encerramento controlado.
+Gonthera CLI 2.1.4. O projeto usa MongoDB como provider padrão e mantém PostgreSQL
+como alternativa relacional oficialmente suportada pelo gerador.
 
-## O que está pronto
+## Recursos incluídos
 
-- `src/app.ts`: Express, health check, Swagger, rotas próprias, rotas geradas e erros;
-- `src/server.ts`: conexão da infraestrutura, servidor HTTP e graceful shutdown;
-- `src/configuration/database`: Prisma, pool PostgreSQL nativo e MongoDB;
-- `src/messaging`: configuração concreta e ciclo de vida do RabbitMQ;
-- `src/middleware`: interceptor global, rate limit e tratamento uniforme de erros;
-- `src/generated/documentation/openapi.ts`: CRUD e contratos OpenAPI gerados;
-- `.gonthera`: exemplo mínimo de entidade, endpoints, enums, mensageria e autorização;
-- `Dockerfile` e `docker-compose.yml`: API e MongoDB em replica set;
-- `.env.example`: todas as variáveis necessárias, sem credenciais de produção.
+- Express 5 com encerramento controlado;
+- Gonthera CLI 2.1.4 e Prisma 5.22;
+- MongoDB em replica set para suportar transações;
+- PostgreSQL e clientes nativos opcionais;
+- script interativo para personalizar uma cópia do template;
+- validação central das variáveis de ambiente com Zod;
+- interceptor global com `X-Request-Id`;
+- logs JSON estruturados e redaction com Pino;
+- Helmet, CORS e rate limit globais;
+- tratamento uniforme de erros;
+- OpenAPI e Swagger UI;
+- infraestrutura opcional para RabbitMQ;
+- Dockerfile e Docker Compose para API e MongoDB.
 
-O CRUD gerado pelo Gonthera 2.1.4 usa Prisma com MongoDB nesta base. O provider é
-definido em `.gonthera/project.json`; alterar apenas `DATABASE_URL` não troca o
-provider. Consulte [Configuração de bancos](BANCOS-DE-DADOS.md) para usar
-PostgreSQL, o provider relacional oficialmente suportado.
+## Requisitos
 
-## Primeiro uso local
+- Node.js 20.19 ou superior;
+- Java 11 ou superior;
+- Docker com Docker Compose para o ambiente local recomendado;
+- JAR `gonthera-cli-2.1.4.jar` em `.gonthera/`.
 
-Requisitos: Node.js 20.19 ou superior e Java 11 ou superior.
+O gerador é distribuído como JAR, não como pacote npm. Caso ele seja armazenado em
+outro local, ajuste os scripts `gonthera-cli` e `gonthera-validate` no
+`package.json`.
+
+## Primeiro uso
+
+Instale as dependências e personalize a cópia do template:
 
 ```bash
 npm install
 npm run setup
+```
+
+O setup solicita nome técnico, nome de exibição, `mainPackage`, nome do banco,
+porta HTTP e exchange RabbitMQ. Ele atualiza os arquivos de configuração e cria
+`.env` quando esse arquivo ainda não existe.
+
+Depois, valide e gere o código do Gonthera:
+
+```bash
 npm run gonthera-validate
 npm run gonthera-cli
+npm run prisma:validate
 npm run prisma:generate
+```
+
+Inicie o MongoDB, aplique o schema e execute a API:
+
+```bash
 docker compose up -d mongodb
 npm run prisma:push
 npm run dev
 ```
 
-Neste workspace, o script procura o JAR em
-`.gonthera/gonthera-cli-2.1.4.jar`. Ao copiar este diretório para outro repositório,
-coloque o JAR nesse caminho ou ajuste os scripts `gonthera-cli` e
-`gonthera-validate` no `package.json`.
+Por padrão, ficam disponíveis:
 
-A API abre em `http://127.0.0.1:3000`, o Swagger em `/docs` e o documento OpenAPI
-em `/openapi.json`. O exemplo inicial gera CRUD em `/example` e `/example/:id`.
+- API: `http://127.0.0.1:3000`;
+- health check: `http://127.0.0.1:3000/health`;
+- Swagger UI: `http://127.0.0.1:3000/docs`;
+- OpenAPI JSON: `http://127.0.0.1:3000/openapi.json`;
+- CRUD de exemplo: `/example` e `/example/:id`.
 
-O Gonthera recria automaticamente paths, filtros e schemas OpenAPI quando os JSONs
-de `.gonthera` mudam. `src/documentation/openapi.ts` mescla apenas informações da
-aplicação, como título, health check, segurança, servidores e rotas manuais.
+## Personalizar sem interação
 
-O MongoDB precisa operar como replica set para suportar as transações dos
-repositories gerados. O serviço do Compose configura o replica set `rs0`
-automaticamente para desenvolvimento local.
-
-## Executar tudo com Docker
-
-Gere os fontes antes do primeiro build, pois `src/generated` e
-`prisma/schema.prisma` são resultados do Gonthera:
-
-```bash
-npm run gonthera-cli
-docker compose up --build
-```
-
-O entrypoint da API executa `prisma db push` antes de abrir a porta HTTP. A variável
-`PRISMA_DEPLOY_MODE` permite selecionar `push`, `migrate` ou `none`; use `migrate`
-com PostgreSQL e migrations já versionadas.
-
-## Bancos de dados
-
-`AppDatabaseConfig` estende a configuração Prisma abstrata gerada e alimenta todo o
-CRUD padrão. A URL vem de `DATABASE_URL`; por padrão ela aponta para o MongoDB.
-
-`AppPostgresConfig` oferece um `pg.Pool` para SQL específico da aplicação. Ele só é
-conectado no bootstrap quando `POSTGRES_NATIVE_ENABLED=true`; acesse
-`postgres.client` em código manual. A conexão nativa usa `POSTGRES_URL`; quando o
-Prisma também usa PostgreSQL, pode reutilizar uma `DATABASE_URL` PostgreSQL.
-
-`AppMongoDatabaseConfig` disponibiliza um cliente nativo adicional em
-`mongodb.client` e `mongodb.database`. Ele só é conectado quando
-`MONGODB_ENABLED=true` e não é necessário para o CRUD Prisma. Customize pool,
-autenticação ou seleção de banco sobrescrevendo os métodos protegidos da classe
-base.
-
-## RabbitMQ
-
-O contrato inicial gera o publisher `EntityChangedPub`. Para habilitar a conexão no
-bootstrap, configure `RABBITMQ_ENABLED=true`. Publishers e subscribers adicionais
-são declarados em `.gonthera/messaging.json`; implementações concretas de subscribers
-devem permanecer em `src/messaging`, fora da pasta gerada.
-
-## Pipeline HTTP
-
-Todas as requisições passam pelo `requestInterceptor` antes do parser JSON e das
-rotas. O interceptor aceita um `X-Request-Id` válido ou gera um UUID, devolve esse
-identificador no response header e registra um log JSON ao concluir a resposta.
-Defina `REQUEST_LOG_ENABLED=false` para desativar somente o log; a identificação da
-requisição permanece ativa.
-
-O rate limit global permite 100 requisições por IP a cada 60 segundos por padrão e
-responde com HTTP 429 ao exceder o limite. Configure por ambiente:
-
-```dotenv
-RATE_LIMIT_ENABLED=true
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX=100
-TRUST_PROXY_HOPS=0
-```
-
-`TRUST_PROXY_HOPS` deve representar exatamente a quantidade de proxies reversos
-confiáveis antes da API. Uma configuração incorreta permite falsificação do IP usado
-pelo rate limit. O store padrão fica em memória e atende uma única instância; em uma
-implantação com múltiplas réplicas, substitua-o por um store externo compartilhado.
-
-Helmet adiciona os headers de segurança e mantém uma política CSP compatível com o
-Swagger UI. O CORS aceita somente as origens listadas, separadas por vírgula:
-
-```dotenv
-HELMET_ENABLED=true
-CORS_ENABLED=true
-CORS_ORIGINS="http://localhost:4200,http://localhost:5173"
-CORS_CREDENTIALS=false
-```
-
-As variáveis são validadas com Zod antes da infraestrutura iniciar. Uma configuração
-inválida interrompe o processo e informa quais chaves precisam ser corrigidas.
-
-Os logs usam Pino em JSON, carregam `requestId` e ocultam campos comuns de senha,
-token, autorização e cookie. Configure o nível com `LOG_LEVEL`.
-
-## Configurar uma cópia do template
-
-Após baixar a base e instalar as dependências, execute `npm run setup`. O assistente
-configura nome técnico, nome de exibição, `mainPackage`, banco MongoDB, porta e
-exchange RabbitMQ. Ele atualiza `package.json`, lockfile, `.gonthera/project.json`,
-`.env.example`, título da documentação e cria `.env` quando ainda não existir.
-
-Para uso não interativo:
+O setup também aceita todos os valores por argumentos:
 
 ```bash
 npm run setup -- \
@@ -148,56 +83,240 @@ npm run setup -- \
   --exchange minha.api.events
 ```
 
-Um `.env` existente é preservado. Use `--overwrite-env` somente quando quiser
-substituí-lo pelo novo `.env.example`.
+Arquivos atualizados pelo setup:
 
-## Fluxo de desenvolvimento
+- `package.json` e `package-lock.json`;
+- `.gonthera/project.json`;
+- `.env.example`;
+- `README.md`;
+- `.env`, somente quando ele ainda não existe.
 
-Edite os JSONs de `.gonthera` e execute:
+Um `.env` existente é preservado. Passe `--overwrite-env` apenas quando quiser
+substituí-lo integralmente pelo `.env.example` recém-configurado.
+
+O setup mantém MongoDB como provider padrão. Para usar PostgreSQL, siga
+[Configuração de banco de dados](docs/BANCOS-DE-DADOS.md).
+
+## Configuração do ambiente
+
+O módulo `src/configuration/environment.ts` valida o ambiente com Zod antes de
+iniciar bancos, mensageria ou servidor HTTP. Valores inválidos interrompem o
+bootstrap e identificam as variáveis que precisam ser corrigidas.
+
+Principais grupos disponíveis em `.env.example`:
+
+| Grupo | Variáveis |
+| --- | --- |
+| Aplicação | `NODE_ENV`, `APP_NAME`, `APP_DISPLAY_NAME`, `HOST`, `PORT` |
+| Logging | `LOG_LEVEL`, `REQUEST_LOG_ENABLED` |
+| Segurança | `HELMET_ENABLED`, `CORS_ENABLED`, `CORS_ORIGINS`, `CORS_CREDENTIALS` |
+| Rate limit | `RATE_LIMIT_ENABLED`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` |
+| Proxy | `TRUST_PROXY_HOPS` |
+| Prisma | `DATABASE_URL`, `PRISMA_DEPLOY_MODE` |
+| PostgreSQL nativo | `POSTGRES_NATIVE_ENABLED`, `POSTGRES_URL`, `POSTGRES_POOL_MAX` |
+| MongoDB nativo | `MONGODB_ENABLED`, `MONGODB_URL`, `MONGODB_DATABASE` |
+| RabbitMQ | `RABBITMQ_ENABLED`, `RABBITMQ_URL`, `RABBITMQ_EXCHANGE` |
+
+`TRUST_PROXY_HOPS` deve representar exatamente a quantidade de proxies reversos
+confiáveis entre o cliente e a API. Mantenha `0` quando não houver proxy.
+
+## Pipeline HTTP
+
+Toda requisição passa pela seguinte sequência:
+
+1. interceptor e atribuição do `X-Request-Id`;
+2. headers de segurança do Helmet;
+3. validação de CORS;
+4. rate limit;
+5. parser JSON com limite de 1 MB;
+6. rotas manuais e geradas;
+7. resposta 404 ou middleware uniforme de erros.
+
+### Interceptor e logs
+
+O interceptor preserva um `X-Request-Id` válido recebido do cliente ou gera um UUID.
+O mesmo identificador é devolvido no response header e incluído nos logs da
+requisição e nos erros.
+
+Pino escreve logs JSON com nome do serviço, ambiente, nível, método, caminho, status,
+duração e IP. Campos comuns de senha, token, autorização e cookie são censurados.
+Use `LOG_LEVEL` para controlar o nível e `REQUEST_LOG_ENABLED=false` para desativar
+somente o log de acesso.
+
+### Helmet e CORS
+
+Helmet adiciona os headers de segurança e usa uma política CSP compatível com o
+Swagger UI. O CORS aceita as origens listadas em `CORS_ORIGINS`, separadas por
+vírgula:
+
+```dotenv
+HELMET_ENABLED=true
+CORS_ENABLED=true
+CORS_ORIGINS="http://localhost:4200,http://localhost:5173"
+CORS_CREDENTIALS=false
+```
+
+Não combine `CORS_CREDENTIALS=true` com origem `*`; a validação de ambiente rejeita
+essa configuração.
+
+### Rate limit
+
+O padrão permite 100 requisições por IP a cada 60 segundos e responde HTTP 429 ao
+exceder o limite:
+
+```dotenv
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX=100
+```
+
+O store padrão fica em memória e é adequado para uma única instância. Uma futura
+implantação com múltiplas réplicas deverá usar um store externo compartilhado.
+
+## Gonthera e código gerado
+
+Os contratos do domínio são declarados em `.gonthera`:
+
+```text
+.gonthera/
+├── project.json
+├── entities.json
+├── endpoints.json
+├── enums.json
+└── messaging.json
+```
+
+Ao executar `npm run gonthera-cli`, o gerador recria integralmente:
+
+- `src/generated`;
+- `prisma/schema.prisma`.
+
+Nunca faça customizações permanentes nesses caminhos. Controllers próprios, regras
+de negócio, middleware, configuração concreta, repositories customizados e rotas
+manuais devem permanecer fora de `src/generated`.
+
+Quando `controllerAbstract: true`, crie a subclasse concreta fora da pasta gerada e
+registre sua factory no segundo argumento de `createGeneratedRoutes`. Não repita os
+bindings HTTP gerados.
+
+Autenticação e autorização no Node.js são responsabilidades da aplicação consumidora
+e não são geradas pelo Gonthera CLI 2.1.4.
+
+## Bancos de dados
+
+O CRUD gerado usa a instância Prisma de `AppDatabaseConfig` e lê `DATABASE_URL`.
+MongoDB é selecionado explicitamente em `.gonthera/project.json`; trocar somente a
+URL não altera o provider do schema.
+
+MongoDB precisa operar como replica set porque os repositories gerados usam
+transações. O Compose configura automaticamente o replica set `rs0` para o ambiente
+local. MongoDB standalone falha durante operações transacionais.
+
+Clientes nativos são opcionais e destinados apenas a módulos customizados:
+
+- `MONGODB_ENABLED=true` habilita `mongodb.client` e `mongodb.database`;
+- `POSTGRES_NATIVE_ENABLED=true` habilita o pool `postgres.client`;
+- o pool PostgreSQL usa `POSTGRES_URL` ou reutiliza `DATABASE_URL` quando ela já for
+  PostgreSQL.
+
+Para detalhes de MongoDB, PostgreSQL, migrations e troca de provider, consulte
+[Configuração de banco de dados](docs/BANCOS-DE-DADOS.md).
+
+## RabbitMQ
+
+O contrato inicial gera o publisher `EntityChangedPub`. Para conectar a aplicação,
+configure `RABBITMQ_ENABLED=true`, uma `RABBITMQ_URL` válida e o exchange.
+
+Publishers e subscribers adicionais são declarados em `.gonthera/messaging.json`.
+Listeners e implementações concretas de subscribers pertencem a `src/messaging`,
+fora da pasta gerada.
+
+## Desenvolvimento
+
+Depois de alterar arquivos em `.gonthera`, execute:
 
 ```bash
 npm run gonthera-validate
 npm run gonthera-cli
+npm run prisma:validate
+npm run prisma:generate
 npm run prisma:push
 npm run typecheck
 ```
 
-O Gonthera recria `src/generated` e `prisma/schema.prisma`. Mantenha controllers
-customizados, regras de negócio, configuração concreta e rotas próprias fora desses
-caminhos. No PostgreSQL, substitua `prisma:push` por `prisma:migrate` e versione as
-migrations em `prisma/migrations`.
+O último comando de banco depende do provider:
 
-Quando usar `controllerAbstract: true`, crie a subclasse concreta fora de
-`src/generated`, registre sua factory em um arquivo da aplicação e passe o registro
-como segundo argumento de `createGeneratedRoutes`. As rotas CRUD continuam geradas.
+- MongoDB: `npm run prisma:push`;
+- PostgreSQL em desenvolvimento: `npm run prisma:migrate -- --name descricao`;
+- PostgreSQL em produção: `npm run prisma:deploy`.
+
+Prisma Migrate não suporta MongoDB. As migrations existentes em
+`prisma/migrations` pertencem ao fluxo PostgreSQL.
+
+## Docker
+
+Gere os fontes antes do primeiro build, pois eles não são substituídos pelo
+Dockerfile:
+
+```bash
+npm run gonthera-cli
+docker compose up --build
+```
+
+O entrypoint usa `PRISMA_DEPLOY_MODE`:
+
+- `push`: executa `prisma db push`, padrão MongoDB;
+- `migrate`: executa `prisma migrate deploy`, para PostgreSQL;
+- `none`: inicia sem sincronizar o schema.
+
+O MongoDB do Compose é voltado ao desenvolvimento local, não configura autenticação
+e publica sua porta apenas no loopback da máquina.
+
+## Scripts principais
+
+| Script | Finalidade |
+| --- | --- |
+| `npm run setup` | Personalizar uma cópia do template |
+| `npm run gonthera-validate` | Validar os contratos `.gonthera` |
+| `npm run gonthera-cli` | Regerar fontes e schema Prisma |
+| `npm run prisma:validate` | Validar o schema Prisma |
+| `npm run prisma:generate` | Gerar o Prisma Client |
+| `npm run prisma:push` | Aplicar schema MongoDB |
+| `npm run prisma:migrate` | Criar migration PostgreSQL |
+| `npm run prisma:deploy` | Aplicar migrations PostgreSQL versionadas |
+| `npm run dev` | Executar em desenvolvimento com watch |
+| `npm run typecheck` | Verificar TypeScript sem emitir arquivos |
+| `npm run build` | Gerar Prisma Client e compilar a aplicação |
+| `npm start` | Executar a compilação em `dist` |
 
 ## Estrutura
 
 ```text
 base-node-backend/
-├── .gonthera/
+├── .gonthera/                     # contratos do gerador e JAR local
 ├── docs/
-│   ├── BANCOS-DE-DADOS.md
-│   └── README.md
+│   └── BANCOS-DE-DADOS.md
 ├── prisma/
-│   ├── migrations/
+│   ├── migrations/                # PostgreSQL
 │   └── schema.prisma              # gerado
+├── scripts/
+│   └── setup.mjs
 ├── src/
-│   ├── configuration/database/
-│   ├── controllers/               # controllers customizados
+│   ├── configuration/
+│   │   ├── database/
+│   │   ├── environment.ts
+│   │   └── logger.ts
 │   ├── documentation/
-│   ├── generated/                 # gerado
+│   ├── generated/                 # descartável e gerado
 │   ├── messaging/
 │   ├── middleware/
-│   ├── models/                    # modelos exclusivos da aplicação
-│   ├── repositories/              # persistência customizada, inclusive MongoDB
 │   ├── routes/
-│   ├── services/                  # regras de negócio
 │   ├── app.ts
 │   └── server.ts
 ├── .env.example
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker-entrypoint.sh
 ├── package.json
 └── tsconfig.json
 ```

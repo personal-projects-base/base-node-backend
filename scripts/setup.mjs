@@ -25,7 +25,7 @@ const lockPath = resolve(root, 'package-lock.json');
 const projectPath = resolve(root, '.gonthera/project.json');
 const environmentExamplePath = resolve(root, '.env.example');
 const environmentPath = resolve(root, '.env');
-const documentationPath = resolve(root, 'docs/README.md');
+const documentationPath = resolve(root, 'README.md');
 
 const packageJson = JSON.parse(await readFile(packagePath, 'utf8'));
 const projectJson = JSON.parse(await readFile(projectPath, 'utf8'));
